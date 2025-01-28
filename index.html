@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Synthetic Synesthesia</title>
+  <title>SYNTHetic SYNesTHesia</title>
   <style>
     canvas {
       border: 2px solid #222;
@@ -11,53 +11,28 @@
       border-radius: 4px;
     }
     .controls {
-      margin-bottom: 10px;
+      margin: 10px;
     }
   </style>
 </head>
 <body>
   <div class="controls">
     <input type="color" id="color" value="#000000">
-    <button id="clear">Clear</button>
+    <button id="reset">clear</button>
   </div>
-  <canvas id="paintCanvas" width="500" height="500"></canvas>
-
+  <canvas id="canvas" width="1200px" height="800px"></canvas>
+  <script src="canvasManager.js"></script>
   <script>
-    const canvas = document.getElementById('paintCanvas');
-    const ctx = canvas.getContext('2d');
-    const colorPicker = document.getElementById('color');
-    const clearButton = document.getElementById('clear');
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvasElement = document.getElementById('canvas');
+      const colorPalatte = document.getElementById('color');
+      const resetButton = document.getElementById('reset');
 
-    let painting = false;
+      const canvasManager = new CanvasManager(canvasElement, colorPalatte, resetButton);
 
-    // Start painting
-    canvas.addEventListener('mousedown', () => {
-      painting = true;
-    });
-
-    // Stop painting
-    canvas.addEventListener('mouseup', () => {
-      painting = false;
-      ctx.beginPath(); // Reset the path
-    });
-
-    // Paint on canvas
-    canvas.addEventListener('mousemove', (e) => {
-      if (!painting) return;
-
-      ctx.lineWidth = 5;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = colorPicker.value;
-
-      ctx.lineTo(e.offsetX, e.offsetY);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(e.offsetX, e.offsetY);
-    });
-
-    // Clear canvas
-    clearButton.addEventListener('click', () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvasManager.onPixelChange = (x, y, color) => {
+        console.log(`Pixel (${x}, ${y}) changed to ${color}`);
+      };
     });
   </script>
 </body>
