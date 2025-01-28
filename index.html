@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synthetic Synesthesia</title>
+  <style>
+    canvas {
+      border: 2px solid #222;
+      cursor: crosshair;
+      border-radius: 4px;
+    }
+    .controls {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <input type="color" id="color" value="#000000">
+    <button id="clear">Clear</button>
+  </div>
+  <canvas id="paintCanvas" width="500" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById('paintCanvas');
+    const ctx = canvas.getContext('2d');
+    const colorPicker = document.getElementById('color');
+    const clearButton = document.getElementById('clear');
+
+    let painting = false;
+
+    // Start painting
+    canvas.addEventListener('mousedown', () => {
+      painting = true;
+    });
+
+    // Stop painting
+    canvas.addEventListener('mouseup', () => {
+      painting = false;
+      ctx.beginPath(); // Reset the path
+    });
+
+    // Paint on canvas
+    canvas.addEventListener('mousemove', (e) => {
+      if (!painting) return;
+
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = colorPicker.value;
+
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX, e.offsetY);
+    });
+
+    // Clear canvas
+    clearButton.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  </script>
+</body>
+</html>
