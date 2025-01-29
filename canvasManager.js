@@ -1,16 +1,18 @@
 class CanvasManager {
-  constructor(canvasElement, brushColor, clearButton) {
+  constructor(canvasElement, colorPalette, brushSizeSlider, brushOpacitySlider, resetButton) {
     this.canvas = canvasElement;
     this.ctx = this.canvas.getContext('2d');
-    this.brushColor = brushColor;
-    this.clearButton = clearButton;
+    this.colorPalette = colorPalette;
+    this.brushSizeSlider = brushSizeSlider;
+    this.brushOpacitySlider = brushOpacitySlider;
+    this.resetButton = resetButton;
 
     this.painting = false;
-    this.onPixelChange = null;
-    this.lastImageData = null;
 
+    this.brushColor = '#FFFFFF'
+    this.brushSize = parseInt(this.brushSizeSlider.value);
+    this.brushOpacity = parseInt(this.brushOpacitySlider);
     this.setupEvents();
-    this.storeInitialImageData();
   }
 
   setupEvents() {
@@ -20,8 +22,7 @@ class CanvasManager {
 
     this.canvas.addEventListener('mouseup', () => {
       this.painting = false;
-      this.ctx.beginPath(); // Reset the path
-      this.checkPixelChanges();
+      this.ctx.beginPath();
     });
 
     this.canvas.addEventListener('mousemove', (event) => {
@@ -30,13 +31,28 @@ class CanvasManager {
       }
     });
 
-    this.clearButton.addEventListener('click', () => this.clearCanvas());
+    this.colorPalette.querySelectorAll('.color-box').forEach((box) => {
+      box.addEventListener('click', (event) => {
+        this.brushColor = event.target.dataset.color;
+        this.updateCursor();
+      });
+    });
+
+    this.brushSizeSlider.addEventListener('input', (event) => {
+      this.brushSize = parseInt(event.target.value);
+    });
+
+    this.brushOpacitySlider.addEventListener('input', (event) => {
+      this.brushOpacity = parseInt(event.target.value);
+    })
+
+    this.resetButton.addEventListener('click', () => this.clearCanvas());
   }
 
   draw(x, y) {
-    this.ctx.lineWidth = 20;
+    this.ctx.lineWidth = this.brushSize;
     this.ctx.lineCap = 'round';
-    this.ctx.strokeStyle = this.brushColor || '#000000'; // Default to black if no color selected
+    this.ctx.strokeStyle = this.brushColor || '#FFFFFF'; // Default to black if no color selected
 
     this.ctx.lineTo(x, y);
     this.ctx.stroke();
@@ -46,44 +62,5 @@ class CanvasManager {
 
   clearCanvas() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.storeInitialImageData();
-  }
-
-  getPixelData() {
-    return this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
-  }
-
-  storeInitialImageData() {
-    this.lastImageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
-  }
-
-  checkPixelChanges() {
-    const currentImageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
-
-    for (let i = 0; i < currentImageData.length; i += 4) {
-      const lastPixel = this.lastImageData.slice(i, i + 4);
-      const currentPixel = currentImageData.slice(i, i + 4);
-
-      if (!this.pixelsEqual(lastPixel, currentPixel)) {
-        const x = (i / 4) % this.canvas.width;
-        const y = Math.floor(i / 4 / this.canvas.width);
-
-        if (this.onPixelChange) {
-          const color = `rgba(${currentPixel[0]}, ${currentPixel[1]}, ${currentPixel[2]}, ${currentPixel[3] / 255})`;
-          this.onPixelChange(x, y, color);
-        }
-      }
-    }
-
-    this.lastImageData = currentImageData.slice();
-  }
-
-  pixelsEqual(pixelA, pixelB) {
-    return (
-      pixelA[0] === pixelB[0] &&
-      pixelA[1] === pixelB[1] &&
-      pixelA[2] === pixelB[2] &&
-      pixelA[3] === pixelB[3]
-    );
   }
 }
