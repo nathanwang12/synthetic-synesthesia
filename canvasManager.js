@@ -18,7 +18,38 @@ class CanvasManager {
           size: parseInt(this.brushSizeSlider.value)
       }
 
+      this.updateCursor();
       this.setupEvents();
+  }
+
+  createCursor() {
+      // Create a temporary canvas for the cursor
+      const cursorCanvas = document.createElement('canvas');
+      const size = this.brush.size + 4; // Add some padding
+      cursorCanvas.width = size;
+      cursorCanvas.height = size;
+      const ctx = cursorCanvas.getContext('2d');
+
+      // Draw the brush circle
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, this.brush.size/2, 0, Math.PI * 2);
+      ctx.fillStyle = this.brush.color;
+      ctx.fill();
+
+      // Draw the border
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, this.brush.size/2, 0, Math.PI * 2);
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Convert to data URL
+      return cursorCanvas.toDataURL();
+  }
+
+  updateCursor() {
+      const cursorUrl = this.createCursor();
+      this.canvas.style.cursor = `url('${cursorUrl}') ${this.brush.size/2 + 2} ${this.brush.size/2 + 2}, auto`;
   }
 
   setupEvents() {
@@ -46,11 +77,13 @@ class CanvasManager {
                   b.classList.remove('selected');
               });
               event.target.classList.add('selected');
+              this.updateCursor();
           });
       });
 
       this.brushSizeSlider.addEventListener("input", (e) => {
           this.brush.size = parseInt(e.target.value);
+          this.updateCursor();
       });
 
       this.clearButton.addEventListener("click", () => {
