@@ -3,18 +3,19 @@ class CanvasManager {
       this.canvas = canvasElement;
       this.canvas.width = this.canvas.offsetWidth;
       this.canvas.height = this.canvas.offsetHeight;
+
       this.ctx = this.canvas.getContext('2d');
       this.ctx.lineJoin = 'round';
       this.ctx.lineCap = 'round';
+
       this.colorPalette = colorPalette;
-      this.slider = {
-          size: brushSizeSlider
-      }
+      this.brushSizeSlider = brushSizeSlider;
       this.clearButton = clearButton;
       this.painting = false;
+
       this.brush = {
           color: '#FFFFFF',
-          size: parseInt(this.slider.size.value)
+          size: parseInt(this.brushSizeSlider.value)
       }
 
       this.setupEvents();
@@ -41,7 +42,6 @@ class CanvasManager {
       this.colorPalette.querySelectorAll('.color-box').forEach((box) => {
           box.addEventListener('click', (event) => {
               this.brush.color = event.target.dataset.color;
-              // Update selected color visual feedback
               this.colorPalette.querySelectorAll('.color-box').forEach(b => {
                   b.classList.remove('selected');
               });
@@ -49,7 +49,7 @@ class CanvasManager {
           });
       });
 
-      this.slider.size.addEventListener("input", (e) => {
+      this.brushSizeSlider.addEventListener("input", (e) => {
           this.brush.size = parseInt(e.target.value);
       });
 
