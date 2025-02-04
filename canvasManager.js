@@ -18,6 +18,18 @@ class CanvasManager {
       size: parseInt(this.brushSizeSlider.value)
     }
 
+    this.colors = [
+      'rgb(255, 255, 255)', // white
+      'rgb(227, 0, 34)', // red
+      'rgb(255, 246, 0)', // yellow
+      'rgb(4, 55, 242)', // blue
+      'rgb(4, 99, 71)', // green
+      'rgb(201, 130, 42)', // sienna
+      'rgb(99, 60, 22)', // umber
+      'rgb(0, 0, 0)', // black
+    ];
+
+
     this.instruments = this.initializeInstruments();
 
     this.updateCursor();
@@ -31,21 +43,21 @@ class CanvasManager {
       for (let col = 0; col < 6; col++) {
         instruments[row][col] = {
           shadedPixels: 0,
-          colorCounts: {
-            '#FFFFFF': 0,
-            '#E30022': 0,
-            '#FFF600': 0,
-            '#0437F2': 0,
-            '#046347': 0,
-            '#C9822A': 0,
-            '#633C16': 0,
-          },
+          colorCounts: Object.fromEntries(this.colors.map(c => [c, 0])),
+          uniqueColors: 0,
+          dominantColor: '',
           pixels: Array.from({ length: 200 }, () =>
             Array.from({ length: 200 }, () => ({
               color: '',
               timeShaded: null,
             }))
           ),
+          quadrants: Array.from({ length: 4 }, () => ({
+            shadedPixels: 0,
+            colorCounts: Object.fromEntries(this.colors.map(c => [c, 0])),
+            uniqueColors: 0,
+            dominantColor: '',
+          })),
         };
       }
     }
@@ -140,22 +152,55 @@ class CanvasManager {
 
     for (let row = 0; row < 4; row++) {
       for (let col = 0; col < 6; col++) {
-        let shadedPixels = 0;
+
         const instrument = this.instruments[row][col];
+        instrument.colorCounts = Object.fromEntries(this.colors.map(c => [c, 0]));
+
+        for (let q = 0; q < 4; q++) {
+          const quadrant = instrument.quadrants[q];
+          quadrant.shadedPixels = 0;
+          quadrant.colorCounts = Object.fromEntries(this.colors.map(c => [c, 0]));
+          quadrant.uniqueColors = 0;
+        }
+
         for (let i = 0; i < 200; i++) {
           for (let j = 0; j < 200; j++) {
+
             const x = col * 200 + j;
             const y = row * 200 + i;
             const index = (y * this.canvas.width + x) * 4;
             const color = `rgb(${pixelData[index]}, ${pixelData[index+1]}, ${pixelData[index+2]})`;
-            instrument.pixels[i, j].color = color;
+            if (this.colors.includes(color)) {
+              instrument.pixels[i][j].color = color;
 
+              const quadIdx = (i >= 100) * 1 + (j >= 100) * 2;
+              const quadrant = instrument.quadrants[quadIdx];
 
-            if (color != 'rgb(0, 0, 0)') shadedPixels++;
+              if (color !== 'rgb(0, 0, 0)') {
+                instrument.shadedPixels++;
+                instrument.colorCounts[color] = (instrument.colorCounts[color] || 0) + 1;
+
+                quadrant.shadedPixels++;
+                quadrant.colorCounts[color] = (quadrant.colorCounts[color] || 0) + 1;
+              }
+            }
           }
         }
-        instrument.shadedPixels = shadedPixels;
-        console.log(`Instrument (${row},${col}): ${instrument.shadedPixels} pixels shaded`);
+
+        instrument.uniqueColors = Object.values(instrument.colorCounts).filter(c => c).length;
+        instrument.dominantColor = Object.entries(instrument.colorCounts).reduce(
+          (a, b) => (b[1] > a[1] ? b : a),
+          ['', 0]
+        )[0];
+
+        for (let q = 0; q < 4; q++) {
+          const quadrant = instrument.quadrants[q];
+          quadrant.uniqueColors = Object.values(quadrant.colorCounts).filter(c => c).length;
+          quadrant.dominantColor = Object.entries(quadrant.colorCounts).reduce(
+            (a, b) => (b[1] > a[1] ? b : a),
+            ['', 0]
+          )[0];
+        }
       }
     }
   }
