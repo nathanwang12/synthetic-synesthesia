@@ -116,20 +116,17 @@
     <button id="clearButton" class="clear-button">CLEAR</button>
   </div>
   <canvas id="paintCanvas"></canvas>
-  <script src="canvasManager.js"></script>
-  <script>
+  <script src="http://unpkg.com/tone"></script>
+  <script type="module">
+    import { CanvasManager } from './CanvasManager.js';
+
     document.addEventListener("DOMContentLoaded", () => {
       const canvasElement = document.getElementById("paintCanvas");
       const colorPalette = document.getElementById("colorPalette");
       const brushSizeSlider = document.getElementById("brushSize");
       const clearButton = document.getElementById("clearButton");
 
-      new CanvasManager(
-        canvasElement,
-        colorPalette,
-        brushSizeSlider,
-        clearButton
-      );
+      new CanvasManager(canvasElement, colorPalette, brushSizeSlider, clearButton);
     });
   </script>
 </body>

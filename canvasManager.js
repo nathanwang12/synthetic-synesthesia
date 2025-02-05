@@ -1,5 +1,9 @@
-class CanvasManager {
+import { SoundManager } from "./SoundManager.js";
+
+export class CanvasManager {
   constructor(canvasElement, colorPalette, brushSizeSlider, clearButton) {
+    this.SM = new SoundManager();
+
     this.canvas = canvasElement;
     this.canvas.width = this.canvas.offsetWidth;
     this.canvas.height = this.canvas.offsetHeight;
@@ -58,6 +62,7 @@ class CanvasManager {
             uniqueColors: 0,
             dominantColor: '',
           })),
+          id: (6 * row) + col,
         };
       }
     }
@@ -88,11 +93,13 @@ class CanvasManager {
   updateCursor() {
     const cursorUrl = this.createCursor();
     this.canvas.style.cursor = `url('${cursorUrl}') ${this.brush.size / 2 + 2} ${this.brush.size / 2 + 2}, auto`;
-    console.log(this.canvas.style.cursor)
   }
 
   setupEvents() {
-    this.canvas.addEventListener("mousedown", () => this.startPainting());
+
+    this.canvas.addEventListener("mousedown", () => {
+      this.startPainting();
+    });
 
     this.canvas.addEventListener("mousemove", (e) => {
       if (this.painting) this.paint(e);
@@ -203,10 +210,12 @@ class CanvasManager {
         }
       }
     }
+    this.SM.setActiveInstruments(this.instruments);
   }
 
   clearCanvas() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.instruments = this.initializeInstruments();
+    this.updateInstrumentData();
   }
 }
