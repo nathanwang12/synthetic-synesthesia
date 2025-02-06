@@ -3,6 +3,7 @@ import { SoundManager } from "./SoundManager.js";
 export class CanvasManager {
   constructor(canvasElement, colorPalette, brushSizeSlider, clearButton) {
     this.SM = new SoundManager();
+    this.audioContextOn = false;
 
     this.canvas = canvasElement;
     this.canvas.width = this.canvas.offsetWidth;
@@ -98,6 +99,10 @@ export class CanvasManager {
   setupEvents() {
 
     this.canvas.addEventListener("mousedown", () => {
+      if (!this.audioContextOn) {
+        this.audioContextOn = true;
+        this.SM.turnOnAudioContext();
+      }
       this.startPainting();
     });
 

@@ -89,11 +89,14 @@
       text-align: center;
     }
 
-    canvas {
-      width: 1200px;
-      height: 800px;
+    .canvas-container {
       border: 2px solid #222;
       border-radius: 4px;
+    }
+
+    canvas {
+      width: 400px;
+      height: 400px;
     }
   </style>
 </head>
@@ -115,10 +118,12 @@
     </div>
     <button id="clearButton" class="clear-button">CLEAR</button>
   </div>
-  <canvas id="paintCanvas"></canvas>
+  <div class="canvas-container">
+    <canvas id="paintCanvas"></canvas>
+  </div>
   <script src="http://unpkg.com/tone"></script>
   <script type="module">
-    import { CanvasManager } from './CanvasManager.js';
+    import { SyntheticSynesthesia } from './SyntheticSynesthesia.js';
 
     document.addEventListener("DOMContentLoaded", () => {
       const canvasElement = document.getElementById("paintCanvas");
@@ -126,7 +131,7 @@
       const brushSizeSlider = document.getElementById("brushSize");
       const clearButton = document.getElementById("clearButton");
 
-      new CanvasManager(canvasElement, colorPalette, brushSizeSlider, clearButton);
+      new SyntheticSynesthesia(canvasElement, colorPalette, brushSizeSlider, clearButton);
     });
   </script>
 </body>
