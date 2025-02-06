@@ -92,14 +92,26 @@
     .canvas-container {
       border: 2px solid #222;
       border-radius: 4px;
+      padding: 0;
     }
 
     canvas {
-      width: 400px;
-      height: 400px;
-      /* width: 1200px;
-      height: 800px; */
+      display: block;
+      width: 1200px;
+      height: 800px;
+      cursor: none;
     }
+
+    #customCursor {
+      position: absolute;
+      pointer-events: none;
+      border: 1px solid #222;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      display: none;
+    }
+
   </style>
 </head>
 <body>
@@ -123,6 +135,7 @@
   <div class="canvas-container">
     <canvas id="paintCanvas"></canvas>
   </div>
+  <div id="customCursor"></div>
   <script src="http://unpkg.com/tone"></script>
   <script type="module">
     import { SyntheticSynesthesia } from './SyntheticSynesthesia.js';

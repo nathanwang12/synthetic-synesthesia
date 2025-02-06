@@ -22,9 +22,16 @@ export class SyntheticSynesthesia {
     this.brushColor = '#FFFFFF';
     this.brushSize = parseInt(this.brushSizeSlider.value);
 
-    this.setUpEvents();
+    this.idToSample = {
+      0: 'kick',
+      1: 'piano',
+      2: 'snare',
+      3: 'atmosphere',
+    }
 
+    this.setUpEvents();
     this.initializeInstruments(this.rows, this.cols);
+    this.updateCursorStyle();
   }
 
   setUpEvents() {
@@ -37,12 +44,14 @@ export class SyntheticSynesthesia {
     });
 
     this.canvas.addEventListener("mousemove", (e) => {
+      this.updateCursor(e);
       if (this.painting) this.paint(e);
     });
 
     this.canvas.addEventListener("mouseup", () => this.endPainting());
 
     this.canvas.addEventListener("mouseout", () => {
+      this.hideCursor();
       if (this.painting) this.endPainting();
     });
 
@@ -53,12 +62,14 @@ export class SyntheticSynesthesia {
           b.classList.remove('selected');
         });
         event.target.classList.add('selected');
+        this.updateCursorStyle();
 
       });
     });
 
     this.brushSizeSlider.addEventListener("input", (e) => {
       this.brushSize = parseInt(e.target.value);
+      this.updateCursorStyle();
     });
 
     this.clearButton.addEventListener("click", () => this.clearCanvas());
@@ -76,7 +87,26 @@ export class SyntheticSynesthesia {
     }).catch((e) => {
         console.error("Error starting AudioContext:", e);
     });
-}
+  }
+
+  updateCursor(event) {
+    const cursor = document.getElementById('customCursor');
+    cursor.style.left = `${event.pageX}px`;
+    cursor.style.top = `${event.pageY}px`;
+    cursor.style.display = "block";
+    console.log("UPDATING!")
+  }
+
+  updateCursorStyle() {
+    const cursor = document.getElementById('customCursor');
+    cursor.style.width = `${this.brushSize}px`;
+    cursor.style.height = `${this.brushSize}px`;
+    cursor.style.backgroundColor = this.brushColor;
+  }
+
+  hideCursor() {
+    document.getElementById('customCursor').style.display = "none";
+  }
 
 
   startPainting() {
@@ -113,8 +143,9 @@ export class SyntheticSynesthesia {
     this.instruments = {};
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
-        const id = this.rows * i + j;
-        this.instruments[id] = new Instrument(id);
+        const id = this.cols * i + j;
+        const sampleId = this.idToSample[id % 4];
+        this.instruments[id] = new Instrument(id, sampleId);
       }
     }
   }
@@ -143,47 +174,110 @@ export class SyntheticSynesthesia {
 }
 
 class Instrument {
-  constructor(id) {
+  constructor(id, sampleId) {
     this.id = id;
+    this.sampleId = sampleId;
 
     this.shadedPixels = 0;
     this.colors = {
-      'rgb(255, 255, 255)': 0, // white
-      'rgb(227, 0, 34)': 0, // red
-      'rgb(255, 246, 0)': 0, // yellow
-      'rgb(4, 55, 242)': 0, // blue
-      'rgb(4, 99, 71)': 0, // green
-      'rgb(201, 130, 42)': 0, // sienna
-      'rgb(99, 60, 22)': 0, // umber
+      'rgb(255, 255, 255)': 0,
+      'rgb(227, 0, 34)': 0,
+      'rgb(255, 246, 0)': 0,
+      'rgb(4, 55, 242)': 0,
+      'rgb(4, 99, 71)': 0,
+      'rgb(201, 130, 42)': 0,
+      'rgb(99, 60, 22)': 0,
     };
     this.dominantColor = null;
-    this.initializeBeats();
+
+    this.sampleSubdivisions = {
+      'kick': '4n',
+      'snare': '2n',
+      'piano': '2n',
+      'atmosphere': '2m',
+    }
 
     this.initializeSampler();
+    this.initializeBeats();
     this.sequence = null;
   }
 
   initializeBeats() {
     this.beats = {};
-    for (let i = 0; i < 4; i++) this.beats[i] = new Beat(i);
+    for (let i = 0; i < 4; i++) this.beats[i] = new Beat(i, this.sampleId);
   }
 
   initializeSampler() {
-    this.sampler = new Tone.Sampler({
-      urls: { B3: 'https://tonejs.github.io/audio/drum-samples/Techno/kick.mp3' },
-      release: 1,
-    }).toDestination();
-    this.effects = new Effects();
-    this.sampler.chain(
-      this.effects.vibrato,
-      // this.effects.decayDelay,
-      this.effects.jetsons,
-      this.effects.bitCrusher,
-      this.effects.chorusRattler,
-      this.effects.tremolo,
-      this.effects.chorusThirds,
-      Tone.Destination,
-    )
+    if (this.sampleId === 'kick') {
+      this.sampler = new Tone.Sampler({
+        urls: {D0: 'https://tonejs.github.io/audio/drum-samples/Techno/kick.mp3'},
+        release: 1,
+        volume: -12,
+      }).toDestination();
+    } else if (this.sampleId === 'piano') {
+      this.sampler = new Tone.Sampler({
+        baseUrl: './piano/',
+        urls: {
+          'A3': 'A3.mp3',
+          'A4': 'A4.mp3',
+          'A5': 'A5.mp3',
+          'B3': 'B3.mp3',
+          'B4': 'B4.mp3',
+          'B5': 'B5.mp3',
+          'C3': 'C3.mp3',
+          'C4': 'C4.mp3',
+          'C5': 'C5.mp3',
+          'D3': 'D3.mp3',
+          'D4': 'D4.mp3',
+          'D5': 'D5.mp3',
+          'E3': 'E3.mp3',
+          'E4': 'E4.mp3',
+          'E5': 'E5.mp3',
+          'F3': 'F3.mp3',
+          'F4': 'F4.mp3',
+          'F5': 'F5.mp3',
+          'G3': 'G3.mp3',
+          'G4': 'G4.mp3',
+          'G5': 'G5.mp3',
+        },
+        release: 1,
+        volume: -4,
+      }).toDestination();
+    } else if (this.sampleId === 'snare') {
+      this.sampler = new Tone.Sampler({
+        urls: {D0: 'https://tonejs.github.io/audio/drum-samples/Techno/snare.mp3'},
+        release: 1,
+        volume: -12,
+      }).toDestination();
+    } else if (this.sampleId === 'atmosphere') {
+      this.sampler = new Tone.Sampler({
+        baseUrl: './atmosphere/',
+        urls: {
+          'A3': 'A3.mp3',
+          'A1': 'A1.mp3',
+          'A2': 'A2.mp3',
+          'B3': 'B3.mp3',
+          'B1': 'B1.mp3',
+          'B2': 'B2.mp3',
+          'C3': 'C3.mp3',
+          'C1': 'C1.mp3',
+          'C2': 'C2.mp3',
+          'D3': 'D3.mp3',
+          'D1': 'D1.mp3',
+          'D2': 'D2.mp3',
+          'E3': 'E3.mp3',
+          'E1': 'E1.mp3',
+          'E2': 'E2.mp3',
+          'F3': 'F3.mp3',
+          'F1': 'F1.mp3',
+          'F2': 'F2.mp3',
+          'G3': 'G3.mp3',
+          'G1': 'G1.mp3',
+          'G2': 'G2.mp3',
+        },
+        release: 1,
+      }).toDestination();
+    }
   }
 
   processPixelData(data) {
@@ -209,25 +303,17 @@ class Instrument {
         const beat = this.beats[i];
         beat.dominantColor = this.getDominantColor(beat.colors);
       }
-
-      Object.entries(this.colors).forEach(([color, numPixels]) => {
-        const wet = Math.min(1, numPixels / 80000);
-        this.effects.colorToEffect[color].set({ wet: wet });
-        console.log("changing wet", wet)
-      });
     }
   }
 
   updateSequence() {
-    if (this.sequence !== null) {
-      this.sequence.dispose();
-    }
-    if (this.shadedPixels) {
-      const measure = this.generateMeasure();
-      console.log(measure);
+    const measure = this.generateMeasure();
+    if (!this.sequence) {
       this.sequence = new Tone.Sequence((time, note) => {
-        this.sampler.triggerAttackRelease(note, '4n', time);
-      }, measure, '4n').start(0);
+        this.sampler.triggerAttackRelease(note, this.sampleSubdivisions[this.sampleId], time);
+      }, measure, this.sampleSubdivisions[this.sampleId]).start(0);
+    } else {
+      this.sequence.events = measure;
     }
   }
 
@@ -240,93 +326,41 @@ class Instrument {
   }
 }
 
-class Effects {
-  constructor() {
-    this.chorusThirds = new Tone.Chorus().start();
-    this.chorusThirds.set({
-      frequency: 4,
-      delayTime: 16,
-      type: 'triangle',
-      depth: 1,
-      feedback: 0.1,
-      spread: 80,
-      wet: 0,
-    });
-
-    this.chorusRattler = new Tone.Chorus().start();
-    this.chorusRattler.set({
-      frequency: '16n',
-      delayTime: 15,
-      type: 'square',
-      depth: 0.2,
-      feedback: 0.3,
-      spread: 80,
-      wet: 0,
-    });
-
-    this.vibrato = new Tone.Vibrato();
-    this.vibrato.set({
-      frequency: '32n',
-      depth: 0.2,
-      type: 'sine',
-      wet: 0,
-    });
-
-    this.tremolo = new Tone.Tremolo();
-    this.tremolo.set({
-      frequency: '16n',
-      type: 'triangle',
-      depth: 0.6,
-      spread: 0,
-      wet: 0,
-    });
-
-    this.bitCrusher = new Tone.BitCrusher();
-    this.bitCrusher.set({
-      bits: 1,
-      wet: 0,
-    });
-
-    this.decayDelay = new Tone.FeedbackDelay();
-    this.decayDelay.set({
-      delayTime: '6n',
-      feedback: 0.4,
-      wet: 0,
-    });
-
-    this.jetsons = new Tone.Phaser();
-    this.jetsons.set({
-      frequency: '4n',
-      octaves: 3.3,
-      Q: 8,
-      baseFrequency: 250,
-      wet: 0,
-    });
-
-    this.colorToEffect = {
-      'rgb(255, 255, 255)': this.chorusThirds,
-      'rgb(227, 0, 34)': this.chorusRattler,
-      'rgb(255, 246, 0)': this.bitCrusher,
-      'rgb(4, 55, 242)': this.decayDelay,
-      'rgb(4, 99, 71)': this.jetsons,
-      'rgb(201, 130, 42)': this.tremolo,
-      'rgb(99, 60, 22)': this.vibrato,
-    };
-  }
-}
-
 class Beat {
-  constructor(beatId) {
+  constructor(beatId, sampleId) {
     this.beatId = beatId;
+    this.sampleId = sampleId;
+    this.sampleRules = {
+      'kick': {
+        octaves: 1,
+        octaveShift: 0,
+        allowedSubdivisions: 3,
+      },
+      'piano': {
+        octaves: 4,
+        octaveShift: 2,
+        allowedSubdivisions: 2,
+      },
+      'snare': {
+        octaves: 1,
+        octaveShift: 0,
+        allowedSubdivisions: 3,
+      },
+      'atmosphere': {
+        octaves: 3,
+        octaveShift: 0,
+        allowedSubdivisions: 1,
+      }
+    };
     this.shadedPixels = 0;
     this.colors = {
-      'rgb(255, 255, 255)': 0, // white
-      'rgb(227, 0, 34)': 0, // red
-      'rgb(255, 246, 0)': 0, // yellow
-      'rgb(4, 55, 242)': 0, // blue
-      'rgb(4, 99, 71)': 0, // green
-      'rgb(201, 130, 42)': 0, // sienna
-      'rgb(99, 60, 22)': 0, // umber
+      'rgb(255, 255, 255)': 0,
+      'rgb(227, 0, 34)': 0,
+      'rgb(255, 246, 0)': 0,
+      'rgb(4, 55, 242)': 0,
+      'rgb(4, 99, 71)': 0,
+      'rgb(201, 130, 42)': 0,
+      'rgb(99, 60, 22)': 0,
     }
     this.dominantColor = null;
 
@@ -343,12 +377,11 @@ class Beat {
 
   generateNotes() {
     if (!this.shadedPixels) return null;
-
     const letter = this.colorToNote[this.dominantColor];
-    const octave = (this.shadedPixels % 7) + 1;
+    const rules = this.sampleRules[this.sampleId];
+    const octave = this.shadedPixels % rules.octaves + rules.octaveShift;
     const note = `${letter}${octave}`
-
-    const subdivisions = (this.shadedPixels % 3) + 1;
+    const subdivisions = (this.shadedPixels % rules.allowedSubdivisions) + 1;
     return Array(subdivisions).fill(note);
   }
 }
