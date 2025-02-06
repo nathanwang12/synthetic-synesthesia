@@ -21,15 +21,6 @@ export class SyntheticSynesthesia {
 
     this.brushColor = '#FFFFFF';
     this.brushSize = parseInt(this.brushSizeSlider.value);
-    //   'rgb(255, 255, 255)', // white
-    //   'rgb(227, 0, 34)', // red
-    //   'rgb(255, 246, 0)', // yellow
-    //   'rgb(4, 55, 242)', // blue
-    //   'rgb(4, 99, 71)', // green
-    //   'rgb(201, 130, 42)', // sienna
-    //   'rgb(99, 60, 22)', // umber
-    //   'rgb(0, 0, 0)', // black
-    // ];
 
     this.setUpEvents();
 
@@ -155,7 +146,6 @@ class Instrument {
   constructor(id) {
     this.id = id;
 
-    // instrument metrics
     this.shadedPixels = 0;
     this.colors = {
       'rgb(255, 255, 255)': 0, // white
@@ -165,7 +155,7 @@ class Instrument {
       'rgb(4, 99, 71)': 0, // green
       'rgb(201, 130, 42)': 0, // sienna
       'rgb(99, 60, 22)': 0, // umber
-    }
+    };
     this.dominantColor = null;
     this.initializeBeats();
 
@@ -182,12 +172,18 @@ class Instrument {
     this.sampler = new Tone.Sampler({
       urls: { B3: 'https://tonejs.github.io/audio/drum-samples/Techno/kick.mp3' },
       release: 1,
-    });
-    const reverb = new Tone.Reverb();
-    const tremolo = new Tone.Tremolo();
-
-    this.sampler.chain(reverb, tremolo, Tone.Destination);
-
+    }).toDestination();
+    this.effects = new Effects();
+    this.sampler.chain(
+      this.effects.vibrato,
+      // this.effects.decayDelay,
+      this.effects.jetsons,
+      this.effects.bitCrusher,
+      this.effects.chorusRattler,
+      this.effects.tremolo,
+      this.effects.chorusThirds,
+      Tone.Destination,
+    )
   }
 
   processPixelData(data) {
@@ -213,6 +209,12 @@ class Instrument {
         const beat = this.beats[i];
         beat.dominantColor = this.getDominantColor(beat.colors);
       }
+
+      Object.entries(this.colors).forEach(([color, numPixels]) => {
+        const wet = Math.min(1, numPixels / 80000);
+        this.effects.colorToEffect[color].set({ wet: wet });
+        console.log("changing wet", wet)
+      });
     }
   }
 
@@ -235,6 +237,81 @@ class Instrument {
 
   getDominantColor(colors) {
     return Object.entries(colors).reduce((a, b) => (b[1] > a[1] ? b : a), ['', 0])[0];
+  }
+}
+
+class Effects {
+  constructor() {
+    this.chorusThirds = new Tone.Chorus().start();
+    this.chorusThirds.set({
+      frequency: 4,
+      delayTime: 16,
+      type: 'triangle',
+      depth: 1,
+      feedback: 0.1,
+      spread: 80,
+      wet: 0,
+    });
+
+    this.chorusRattler = new Tone.Chorus().start();
+    this.chorusRattler.set({
+      frequency: '16n',
+      delayTime: 15,
+      type: 'square',
+      depth: 0.2,
+      feedback: 0.3,
+      spread: 80,
+      wet: 0,
+    });
+
+    this.vibrato = new Tone.Vibrato();
+    this.vibrato.set({
+      frequency: '32n',
+      depth: 0.2,
+      type: 'sine',
+      wet: 0,
+    });
+
+    this.tremolo = new Tone.Tremolo();
+    this.tremolo.set({
+      frequency: '16n',
+      type: 'triangle',
+      depth: 0.6,
+      spread: 0,
+      wet: 0,
+    });
+
+    this.bitCrusher = new Tone.BitCrusher();
+    this.bitCrusher.set({
+      bits: 1,
+      wet: 0,
+    });
+
+    this.decayDelay = new Tone.FeedbackDelay();
+    this.decayDelay.set({
+      delayTime: '6n',
+      feedback: 0.4,
+      wet: 0,
+    });
+
+    this.jetsons = new Tone.Phaser();
+    this.jetsons.set({
+      frequency: '4n',
+      octaves: 3.3,
+      Q: 8,
+      baseFrequency: 250,
+      wet: 0,
+    });
+
+    this.colorToEffect = {
+      'rgb(255, 255, 255)': this.chorusThirds,
+      'rgb(227, 0, 34)': this.chorusRattler,
+      'rgb(255, 246, 0)': this.bitCrusher,
+      'rgb(4, 55, 242)': this.decayDelay,
+      'rgb(4, 99, 71)': this.jetsons,
+      'rgb(201, 130, 42)': this.tremolo,
+      'rgb(99, 60, 22)': this.vibrato,
+    };
   }
 }
 
