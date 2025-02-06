@@ -74,20 +74,13 @@ export class SyntheticSynesthesia {
   }
 
   initializeAudio() {
-    console.log('initializing audio');
-
-    // Ensure the AudioContext is started
     Tone.start().then(() => {
-        console.log("AudioContext started!");
-
-        // Get the transport and set up timing
         this.transport = Tone.getTransport();
         this.transport.bpm.value = this.bpm;
         this.transport.timeSignature = [4, 4];
         this.transport.loop = true;
         this.transport.loopStart = 0;
         this.transport.loopEnd = '1m';
-
         this.transport.start();
     }).catch((e) => {
         console.error("Error starting AudioContext:", e);
@@ -126,7 +119,6 @@ export class SyntheticSynesthesia {
   }
 
   initializeInstruments() {
-    console.log('initializing instruments')
     this.instruments = {};
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
@@ -165,23 +157,37 @@ class Instrument {
 
     // instrument metrics
     this.shadedPixels = 0;
+    this.colors = {
+      'rgb(255, 255, 255)': 0, // white
+      'rgb(227, 0, 34)': 0, // red
+      'rgb(255, 246, 0)': 0, // yellow
+      'rgb(4, 55, 242)': 0, // blue
+      'rgb(4, 99, 71)': 0, // green
+      'rgb(201, 130, 42)': 0, // sienna
+      'rgb(99, 60, 22)': 0, // umber
+    }
+    this.dominantColor = null;
+    this.initializeBeats();
 
-    this.colors = [
-      'rgb(255, 255, 255)', // white
-      'rgb(227, 0, 34)', // red
-      'rgb(255, 246, 0)', // yellow
-      'rgb(4, 55, 242)', // blue
-      'rgb(4, 99, 71)', // green
-      'rgb(201, 130, 42)', // sienna
-      'rgb(99, 60, 22)', // umber
-    ]
+    this.initializeSampler();
+    this.sequence = null;
+  }
 
+  initializeBeats() {
+    this.beats = {};
+    for (let i = 0; i < 4; i++) this.beats[i] = new Beat(i);
+  }
+
+  initializeSampler() {
     this.sampler = new Tone.Sampler({
       urls: { B3: 'https://tonejs.github.io/audio/drum-samples/Techno/kick.mp3' },
       release: 1,
-    }).toDestination();
+    });
+    const reverb = new Tone.Reverb();
+    const tremolo = new Tone.Tremolo();
 
-    this.sequence = null;
+    this.sampler.chain(reverb, tremolo, Tone.Destination);
+
   }
 
   processPixelData(data) {
@@ -189,22 +195,34 @@ class Instrument {
       for (let j = 0; j < 200; j++) {
         const idx = (i * 200 + j) * 4;
         const color = `rgb(${data[idx]}, ${data[idx + 1]}, ${data[idx + 2]})`;
-        if (this.colors.includes(color)) {
+        if (Object.keys(this.colors).includes(color)) {
           this.shadedPixels++;
+          this.colors[color] = this.colors[color] + 1;
+
+          const beatId = (i >= 100) * 1 + (j >= 100) * 2;
+          const beat = this.beats[beatId];
+          beat.shadedPixels++;
+          beat.colors[color] = beat.colors[color] + 1;
         }
+      }
+    }
+    if (this.shadedPixels) {
+      this.dominantColor = this.getDominantColor(this.colors);
+
+      for (let i = 0; i < 4; i++) {
+        const beat = this.beats[i];
+        beat.dominantColor = this.getDominantColor(beat.colors);
       }
     }
   }
 
   updateSequence() {
     if (this.sequence !== null) {
-      console.log('disposing');
       this.sequence.dispose();
     }
     if (this.shadedPixels) {
-      console.log('adding sequence');
-      console.log('shaded pixels', this.shadedPixels)
       const measure = this.generateMeasure();
+      console.log(measure);
       this.sequence = new Tone.Sequence((time, note) => {
         this.sampler.triggerAttackRelease(note, '4n', time);
       }, measure, '4n').start(0);
@@ -212,14 +230,48 @@ class Instrument {
   }
 
   generateMeasure() {
-    let measure;
-    if (this.shadedPixels % 2 === 0) {
-      measure = ['A4', 'B4', [], []];
-    } else {
-      measure = [[], [], 'G4', 'G4'];
-    }
-    console.log(this.id, measure);
-    return measure;
+    return Array.from({ length: 4 }, (_, i) => this.beats[i].generateNotes());
+  }
 
+  getDominantColor(colors) {
+    return Object.entries(colors).reduce((a, b) => (b[1] > a[1] ? b : a), ['', 0])[0];
+  }
+}
+
+class Beat {
+  constructor(beatId) {
+    this.beatId = beatId;
+    this.shadedPixels = 0;
+    this.colors = {
+      'rgb(255, 255, 255)': 0, // white
+      'rgb(227, 0, 34)': 0, // red
+      'rgb(255, 246, 0)': 0, // yellow
+      'rgb(4, 55, 242)': 0, // blue
+      'rgb(4, 99, 71)': 0, // green
+      'rgb(201, 130, 42)': 0, // sienna
+      'rgb(99, 60, 22)': 0, // umber
+    }
+    this.dominantColor = null;
+
+    this.colorToNote = {
+      'rgb(255, 255, 255)': 'B',
+      'rgb(227, 0, 34)': 'C#',
+      'rgb(255, 246, 0)': 'D',
+      'rgb(4, 55, 242)': 'E',
+      'rgb(4, 99, 71)': 'F#',
+      'rgb(201, 130, 42)': 'G',
+      'rgb(99, 60, 22)': 'A'
+    };
+  }
+
+  generateNotes() {
+    if (!this.shadedPixels) return null;
+
+    const letter = this.colorToNote[this.dominantColor];
+    const octave = (this.shadedPixels % 7) + 1;
+    const note = `${letter}${octave}`
+
+    const subdivisions = (this.shadedPixels % 3) + 1;
+    return Array(subdivisions).fill(note);
   }
 }
