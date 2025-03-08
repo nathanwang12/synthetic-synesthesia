@@ -2,19 +2,27 @@ const BPM = 84;
 const TIME_SIGNATURE = [4, 4];
 const LOOP_DURATION = '2m';
 
+
+// const B_MINOR_SCALE = ['B', 'C#', 'D', 'E', 'F#', 'G#', 'A'];
+// const DIATONIC_TRIADS = {
+//   'B': [0, 2, 5],
+//   'C#': [1, 3, 6],
+//   'D': [2, 4, 0],
+//   'E': [4, 6, 1],
+//   'F#': [5, 0, 2],
+//   'G#': [6, 1, 3],
+//   'A': [7, 2, 4],
+// };
+
 const IDX_TO_SAMPLE = {
   0: 'kick',
   1: 'snare',
   2: 'hihat',
+  // 3: 'atmosphere',
 }
-// const IDX_TO_SAMPLE = {
-//   0: 'kick',
-//   1: 'piano',
-//   2: 'atmosphere',
-//   3: 'snare',
-// }
+
 const SAMPLE_SUBDIVISIONS = {
-  'kick': '1m',
+  'kick': '2n',
   'snare': '2n',
   'hihat': '4n',
   'piano': '4n',
@@ -25,6 +33,62 @@ const DRUM_SAMPLES = {
   'snare': 'https://tonejs.github.io/audio/drum-samples/Techno/snare.mp3',
   'hihat': 'https://tonejs.github.io/audio/drum-samples/Techno/hihat.mp3',
 }
+
+// const ATMOSPHERE_INFO = {
+//   baseUrl: './atmosphere/',
+//   urls: {
+//     'A3': 'A3.mp3',
+//     'A1': 'A1.mp3',
+//     'A2': 'A2.mp3',
+//     'B3': 'B3.mp3',
+//     'B1': 'B1.mp3',
+//     'B2': 'B2.mp3',
+//     'C3': 'C3.mp3',
+//     'C1': 'C1.mp3',
+//     'C2': 'C2.mp3',
+//     'D3': 'D3.mp3',
+//     'D1': 'D1.mp3',
+//     'D2': 'D2.mp3',
+//     'E3': 'E3.mp3',
+//     'E1': 'E1.mp3',
+//     'E2': 'E2.mp3',
+//     'F3': 'F3.mp3',
+//     'F1': 'F1.mp3',
+//     'F2': 'F2.mp3',
+//     'G3': 'G3.mp3',
+//     'G1': 'G1.mp3',
+//     'G2': 'G2.mp3',
+//   },
+//   release: 1,
+// }
+// const PIANO_INFO = {
+//   baseUrl: './piano/',
+//   urls: {
+//     'A3': 'A3.mp3',
+//     'A4': 'A4.mp3',
+//     'A5': 'A5.mp3',
+//     'B3': 'B3.mp3',
+//     'B4': 'B4.mp3',
+//     'B5': 'B5.mp3',
+//     'C3': 'C3.mp3',
+//     'C4': 'C4.mp3',
+//     'C5': 'C5.mp3',
+//     'D3': 'D3.mp3',
+//     'D4': 'D4.mp3',
+//     'D5': 'D5.mp3',
+//     'E3': 'E3.mp3',
+//     'E4': 'E4.mp3',
+//     'E5': 'E5.mp3',
+//     'F3': 'F3.mp3',
+//     'F4': 'F4.mp3',
+//     'F5': 'F5.mp3',
+//     'G3': 'G3.mp3',
+//     'G4': 'G4.mp3',
+//     'G5': 'G5.mp3',
+//   },
+//   release: 1,
+//   volume: -4,
+// }
 
 const COLOR_TO_NOTE = {
   'rgb(255, 255, 255)': 'B',
@@ -183,8 +247,8 @@ export class SyntheticSynesthesia {
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         const idx = this.rows * i + j;
+        // const sampleId = 'atmosphere';
         const sampleId = this.idxToSample[idx % 3];
-        // const sampleId = this.idxToSample[idx % 4];
         this.players[idx] = new Player(idx, sampleId);
       }
     }
@@ -196,7 +260,7 @@ export class SyntheticSynesthesia {
         const pixelData = this.ctx.getImageData(j * 200, i * 200, 200, 200).data;
         const player = this.players[this.rows * i + j];
         player.processPixelData(pixelData);
-        player.updateSequence();
+        if (player.shadedPixels) player.updateSequence();
       }
     }
   }
@@ -226,10 +290,10 @@ class Player {
   }
 
   initializeInstrument() {
+    this.instrument = new Drum(this.sampleId);
     // if (this.sampleId === 'piano') this.instrument = new Piano();
     // else if (this.sampleId === 'atmosphere') this.instrument = new Atmosphere();
     // else this.instrument = new Drum(this.sampleId);
-    this.instrument = new Drum(this.sampleId);
   }
 
   processPixelData(data) {
@@ -262,15 +326,43 @@ class Player {
   }
 
   updateSequence() {
-    const measure = this.instrument.generateMeasure();
+    if (!this.shadedPixels) return;
+    const sampleId = this.sampleId;
+
+    let pattern;
+    if (Object.keys(DRUM_SAMPLES).includes(sampleId)) pattern = this.generateDrumLine();
+    else if (sampleId === 'atmosphere') pattern = [COLOR_TO_NOTE[this.dominantColor]];
+
+
     if (!this.sequence) {
-      const subdivision = SAMPLE_SUBDIVISIONS[this.sampleId];
-      this.sequence = new Tone.Sequence((time, note) => {
-        this.instrument.sampler.triggerAttackRelease(note, subdivision, time);
-      }, measure, subdivision).start(0);
+      if (Object.keys(DRUM_SAMPLES).includes(sampleId)) this.initDrumSequence(pattern);
+      else if (sampleId === 'atmosphere') this.initAtmosphereSequence(pattern);
     } else {
-      this.sequence.events = measure;
+      this.sequence.events = pattern;
     }
+  }
+  generateDrumLine() {
+    const drums = this.instrument;
+    return Array.from({ length: 4 }, (_, i) => drums.beats[i].generateRhythm());
+  }
+
+  generateChord() {
+    const chord = DIATONIC_TRIADS[COLOR_TO_NOTE[this.dominantColor]];
+    return chord.map(i => B_MINOR_SCALE[i]);
+  }
+
+  initDrumSequence(drumLine) {
+    const subdivision = SAMPLE_SUBDIVISIONS[this.sampleId];
+    this.sequence = new Tone.Sequence((time, note) => {
+      this.instrument.sampler.triggerAttackRelease(note, subdivision, time);
+    }, drumLine, subdivision).start(0);
+  }
+
+  initAtmosphereSequence(note) {
+    const subdivision = SAMPLE_SUBDIVISIONS[this.sampleId];
+    this.sequence = new Tone.Sequence((time, note) => {
+      this.instrument.sampler.triggerAttackRelease(note, subdivision, time);
+    }, note, subdivision).start(0);
   }
 }
 
@@ -302,10 +394,6 @@ class Drum {
   initializeBeats() {
     for (let i = 0; i < 4; i++) this.beats[i] = new DrumBeat(i);
   }
-
-  generateMeasure() {
-    return Array.from({ length: 4 }, (_, i) => this.beats[i].generateRhythm());
-  }
 }
 
 class DrumBeat {
@@ -318,32 +406,65 @@ class DrumBeat {
 
   generateRhythm() {
     if (!this.shadedPixels) return null;
-    // console.log(this.dominantColor);
     const numNotes = (this.shadedPixels % 3) + 1;
     const note = `${COLOR_TO_NOTE[this.dominantColor]}2`;
-    // console.log(note);
     return Array(numNotes).fill(note);
   }
 }
 
 // class Piano {
-//   constructor(chord) {
-//     this.chord = chord;
-
-//     this.arpeggio = null;
-//     this.initializeArpeggio();
-
+//   constructor() {
 //     this.sampler = null;
 //     this.initializePianoSample();
+//   }
+
+//   initializePianoSample() {
+//     const reverb = new Tone.Reverb({
+//       wet: 0.75,
+//       decay: 5,
+//     }).toDestination();
+//     this.sampler = new Tone.Sampler(PIANO_INFO).connect(reverb);
 //   }
 // }
 
 // class Atmosphere {
-//   constructor(chord) {
-//     this.chord = chord;
-
+//   constructor() {
 //     this.sampler = null;
 //     this.initializeAtmosphereSample();
+//   }
+
+//   initializeAtmosphereSample() {
+//     // const reverb = new Tone.Reverb({
+//     //   wet: 0.75,
+//     //   decay: 5,
+//     // }).toDestination();
+//     this.sampler = new Tone.Sampler({
+//       baseUrl: './atmosphere/',
+//       urls: {
+//         'A3': 'A3.mp3',
+//         'A1': 'A1.mp3',
+//         'A2': 'A2.mp3',
+//         'B3': 'B3.mp3',
+//         'B1': 'B1.mp3',
+//         'B2': 'B2.mp3',
+//         'C3': 'C3.mp3',
+//         'C1': 'C1.mp3',
+//         'C2': 'C2.mp3',
+//         'D3': 'D3.mp3',
+//         'D1': 'D1.mp3',
+//         'D2': 'D2.mp3',
+//         'E3': 'E3.mp3',
+//         'E1': 'E1.mp3',
+//         'E2': 'E2.mp3',
+//         'F3': 'F3.mp3',
+//         'F1': 'F1.mp3',
+//         'F2': 'F2.mp3',
+//         'G3': 'G3.mp3',
+//         'G1': 'G1.mp3',
+//         'G2': 'G2.mp3',
+//       },
+//       release: 1,
+//     }).toDestination();
 //   }
 // }
 
